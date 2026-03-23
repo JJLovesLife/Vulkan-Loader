@@ -92,7 +92,7 @@ struct loader_device_extension_list {
 
 struct loader_used_object_status {
     VkBool32 status;
-    VkAllocationCallbacks allocation_callbacks;
+    VkAllocationCallbacks allocation_callbacks; // Q: 为什么不是指针 A: 像是 `vkCreateDebugReportCallbackEXT` 这样的 API 入口，可以提供和 instance 不同的 callback, 所以不能用 &instance->alloc_callbacks
 };
 
 struct loader_used_object_list {
@@ -364,12 +364,12 @@ struct loader_instance {
 
     // Indicates which indices in the array are in-use and which are free to be reused
     struct loader_used_object_list surfaces_list;
-    struct loader_used_object_list debug_utils_messengers_list;
-    struct loader_used_object_list debug_report_callbacks_list;
+    struct loader_used_object_list debug_utils_messengers_list; // VK_EXT_debug_utils
+    struct loader_used_object_list debug_report_callbacks_list; // VK_EXT_debug_report
 
-    // Stores debug callbacks - used in the log.
-    VkLayerDbgFunctionNode *current_dbg_function_head;        // Current head
-    VkLayerDbgFunctionNode *instance_only_dbg_function_head;  // Only used for instance create/destroy
+    // Stores debug callbacks - used in the log. // 用户调试回调 VK_EXT_debug_utils or VK_EXT_debug_report
+    VkLayerDbgFunctionNode *current_dbg_function_head;        // Current head // 所有调试回调的 head, 先是 API 直接创建的，然后是 CreateInstance 的时候 pNext 一起创建的（非 Create/Destroy 的时候会被摘除）。
+    VkLayerDbgFunctionNode *instance_only_dbg_function_head;  // Only used for instance create/destroy // 因为新创建的是插到列表头部，所以在 CreateInstance 时候提供的都在末尾，这个就是指向那些的指针 Q: 为什么要有这个 A: 这个只在 Create / Destroy 的时候生效，中间的时候，会从上一个 list 中摘除掉。
 
     VkAllocationCallbacks alloc_callbacks;
 

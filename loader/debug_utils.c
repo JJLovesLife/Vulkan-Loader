@@ -135,6 +135,7 @@ VkResult util_CreateDebugUtilsMessengers(struct loader_instance *inst, const voi
         if (in_structure.sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT) {
             // Assign a unique handle to each messenger (just use the address of the VkDebugUtilsMessengerCreateInfoEXT)
             // This is only being used this way due to it being for an 'anonymous' callback during instance creation
+            // 注：VkDebugUtilsMessengerEXT 总是一个地址，要不是这里的 pNext, 要不就是指向下面创建逻辑中的 uint32_t*, 所以不会和 loader_get_next_available_entry 返回值(index) 一样
             VkDebugUtilsMessengerEXT messenger_handle = (VkDebugUtilsMessengerEXT)(uintptr_t)pNext;
             VkResult ret = util_CreateDebugUtilsMessenger(inst, (const VkDebugUtilsMessengerCreateInfoEXT *)pNext, pAllocator,
                                                           messenger_handle);
@@ -238,7 +239,8 @@ out:
     if (VK_SUCCESS != res) {
         if (pNextIndex) {
             for (struct loader_icd_term *icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
-                if (icd_term->debug_utils_messenger_list.list && icd_term->debug_utils_messenger_list.list[next_index] &&
+                if (icd_term->debug_utils_messenger_list.list && icd_term->debug_utils_messenger_list.capacity > next_index * sizeof(VkDebugUtilsMessengerEXT) &&
+                    icd_term->debug_utils_messenger_list.list[next_index] &&
                     NULL != icd_term->dispatch.DestroyDebugUtilsMessengerEXT) {
                     icd_term->dispatch.DestroyDebugUtilsMessengerEXT(
                         icd_term->instance, icd_term->debug_utils_messenger_list.list[next_index], pAllocator);
@@ -281,9 +283,6 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyDebugUtilsMessengerEXT(VkInstance i
     if (inst->debug_utils_messengers_list.list &&
         inst->debug_utils_messengers_list.capacity > (*debug_messenger_index) * sizeof(struct loader_used_object_status)) {
         inst->debug_utils_messengers_list.list[*debug_messenger_index].status = VK_FALSE;
-        if (NULL != pAllocator) {
-            inst->debug_utils_messengers_list.list[*debug_messenger_index].allocation_callbacks = *pAllocator;
-        }
     }
 
     loader_free_with_instance_fallback(pAllocator, inst, debug_messenger_index);
@@ -394,7 +393,6 @@ void util_DestroyDebugReportCallback(struct loader_instance *inst, VkDebugReport
             pPrev->pNext = pTrav->pNext;
             if (inst->current_dbg_function_head == pTrav) inst->current_dbg_function_head = pTrav->pNext;
             if (inst->instance_only_dbg_function_head == pTrav) inst->instance_only_dbg_function_head = pTrav->pNext;
-            if (inst->current_dbg_function_head == pTrav) inst->current_dbg_function_head = pTrav->pNext;
             loader_free_with_instance_fallback(pAllocator, inst, pTrav);
             break;
         }
@@ -516,7 +514,8 @@ out:
     if (VK_SUCCESS != res) {
         if (pNextIndex) {
             for (struct loader_icd_term *icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
-                if (icd_term->debug_report_callback_list.list && icd_term->debug_report_callback_list.list[next_index] &&
+                if (icd_term->debug_report_callback_list.list && icd_term->debug_report_callback_list.capacity > next_index * sizeof(VkDebugReportCallbackEXT) &&
+                    icd_term->debug_report_callback_list.list[next_index] &&
                     NULL != icd_term->dispatch.DestroyDebugReportCallbackEXT) {
                     icd_term->dispatch.DestroyDebugReportCallbackEXT(
                         icd_term->instance, icd_term->debug_report_callback_list.list[next_index], pAllocator);
@@ -558,9 +557,6 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyDebugReportCallbackEXT(VkInstance i
     if (inst->debug_report_callbacks_list.list &&
         inst->debug_report_callbacks_list.capacity > (*debug_report_index) * sizeof(struct loader_used_object_status)) {
         inst->debug_report_callbacks_list.list[*debug_report_index].status = VK_FALSE;
-        if (NULL != pAllocator) {
-            inst->debug_report_callbacks_list.list[*debug_report_index].allocation_callbacks = *pAllocator;
-        }
     }
     loader_free_with_instance_fallback(pAllocator, inst, debug_report_index);
 }

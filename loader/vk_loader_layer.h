@@ -42,8 +42,8 @@ typedef struct VkDebugUtilsMessengerContent {
 typedef struct VkLayerDbgFunctionNode_ {
     bool is_messenger;
     union {
-        VkDebugReportContent report;
-        VkDebugUtilsMessengerContent messenger;
+        VkDebugReportContent report; // VK_EXT_debug_report
+        VkDebugUtilsMessengerContent messenger; // VK_EXT_debug_utils
     };
     void *pUserData;
     struct VkLayerDbgFunctionNode_ *pNext;
