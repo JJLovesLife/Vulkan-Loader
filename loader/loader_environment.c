@@ -241,7 +241,7 @@ void determine_filter_type(const char *filter_string, enum loader_filter_string_
 
 // Parse the provided filter string provided by the envrionment variable into the appropriate filter
 // struct variable.
-VkResult parse_generic_filter_environment_var(const struct loader_instance *inst, const char *env_var_name,
+VkResult parse_generic_filter_environment_var(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, const char *env_var_name,
                                               struct loader_envvar_filter *filter_struct) {
     VkResult result = VK_SUCCESS;
     memset(filter_struct, 0, sizeof(struct loader_envvar_filter));

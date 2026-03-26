@@ -1825,7 +1825,7 @@ bool loader_get_icd_interface_version(PFN_vkNegotiateLoaderICDInterfaceVersion f
     return true;
 }
 
-void loader_clear_scanned_icd_list(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list) {
+void loader_clear_scanned_icd_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list) {
     if (0 != icd_tramp_list->capacity && icd_tramp_list->scanned_list) {
         for (uint32_t i = 0; i < icd_tramp_list->count; i++) {
             if (icd_tramp_list->scanned_list[i].handle) {
@@ -1839,7 +1839,7 @@ void loader_clear_scanned_icd_list(const struct loader_instance *inst, struct lo
     memset(icd_tramp_list, 0, sizeof(struct loader_icd_tramp_list));
 }
 
-VkResult loader_init_scanned_icd_list(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list) {
+VkResult loader_init_scanned_icd_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list) {
     VkResult res = VK_SUCCESS;
     loader_clear_scanned_icd_list(inst, icd_tramp_list);
     icd_tramp_list->capacity = 8 * sizeof(struct loader_scanned_icd);
@@ -1851,8 +1851,8 @@ VkResult loader_init_scanned_icd_list(const struct loader_instance *inst, struct
     }
     return res;
 }
-
-VkResult loader_add_direct_driver(const struct loader_instance *inst, uint32_t index,
+// index is for logging only
+VkResult loader_add_direct_driver(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, uint32_t index,
                                   const VkDirectDriverLoadingInfoLUNARG *pDriver, struct loader_icd_tramp_list *icd_tramp_list) {
     // Assume pDriver is valid, since there is no real way to check it. Calling code should make sure the pointer to the array
     // of VkDirectDriverLoadingInfoLUNARG structures is non-null.
@@ -1985,14 +1985,16 @@ VkResult loader_add_direct_driver(const struct loader_instance *inst, uint32_t i
 
     return VK_SUCCESS;
 }
-
+// 扩展 VK_LUNARG_direct_driver_loading 允许应用层指定 driver / exclude driver
+// 扩展的 pNext 中指定的 driver 输出到 icd_tramp_list
 // Search through VkInstanceCreateInfo's pNext chain for any drivers from the direct driver loading extension and load them.
-VkResult loader_scan_for_direct_drivers(const struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo,
+VkResult loader_scan_for_direct_drivers(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo,
                                         struct loader_icd_tramp_list *icd_tramp_list, bool *direct_driver_loading_exclusive_mode) {
     if (NULL == pCreateInfo) {
         // Don't do this logic unless we are being called from vkCreateInstance, when pCreateInfo will be non-null
         return VK_SUCCESS;
     }
+    assert(inst != NULL);
     bool direct_driver_loading_enabled = false;
     // Try to if VK_LUNARG_direct_driver_loading is enabled and if we are using it exclusively
     // Skip this step if inst is NULL, aka when this function is being called before instance creation
@@ -3860,7 +3862,7 @@ out:
 // [layer] 根据对应 manifest_type 的环境变量去扫描对应目录下的 JSON 文件，然后把文件路径添加到 out_files 中
 // path_override 是 explicit layer 时候额外的一个 "环境变量" (实际上是 override layer的参数)，用来调整扫描的目录。
 // [manifest_type == LOADER_DATA_FILE_MANIFEST_DRIVER] inst->settings.device_configurations_active 会被读取以决定一些环境变量是否应该被使用
-// [else] 
+// [else] ALLOC_AND_LOG_ONLY
 VkResult loader_get_data_files(NOT_ONLY_ALLOC_AND_LOG const struct loader_instance *inst, enum loader_data_files_type manifest_type,
                                const char *path_override, struct loader_string_list *out_files) {
     VkResult res = VK_SUCCESS;
@@ -4078,7 +4080,9 @@ out:
 // \returns
 // Vulkan result
 // (on result == VK_SUCCESS) a list of icds that were discovered
-VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list,
+//
+// inst->settings.device_configurations_active 会被读取，因为当 setting 中声明了 device config, 驱动筛选相关的环境变量会被忽略
+VkResult loader_icd_scan(NOT_ONLY_ALLOC_AND_LOG const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list,
                          const VkInstanceCreateInfo *pCreateInfo, bool *skipped_portability_drivers) {
     VkResult res = VK_SUCCESS;
     struct loader_string_list manifest_files = {0};
