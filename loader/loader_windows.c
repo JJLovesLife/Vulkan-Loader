@@ -116,7 +116,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     return TRUE;
 }
 
-bool windows_add_json_entry(const struct loader_instance *inst,
+bool windows_add_json_entry(ALLOC_AND_LOG_ONLY const struct loader_instance *inst,
                             char **reg_data,    // list of JSON files
                             PDWORD total_size,  // size of reg_data
                             LPCSTR key_name,    // key name - used for debug prints - i.e. VulkanDriverName
@@ -169,7 +169,7 @@ bool windows_add_json_entry(const struct loader_instance *inst,
     return true;
 }
 
-bool windows_get_device_registry_entry(const struct loader_instance *inst, char **reg_data, PDWORD total_size, DEVINST dev_id,
+bool windows_get_device_registry_entry(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char **reg_data, PDWORD total_size, DEVINST dev_id,
                                        LPCSTR value_name, VkResult *result) {
     HKEY hkrKey = INVALID_HANDLE_VALUE;
     DWORD requiredSize, data_type;
@@ -233,7 +233,7 @@ out:
     return found;
 }
 
-VkResult windows_get_device_registry_files(const struct loader_instance *inst, uint32_t log_target_flag, char **reg_data,
+VkResult windows_get_device_registry_files(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, uint32_t log_target_flag, char **reg_data,
                                            PDWORD reg_data_size, LPCSTR value_name) {
     const wchar_t *softwareComponentGUID = L"{5c4c3332-344d-483c-8739-259e934c9cc8}";
     const wchar_t *displayGUID = L"{4d36e968-e325-11ce-bfc1-08002be10318}";
@@ -352,7 +352,7 @@ VkResult windows_get_device_registry_files(const struct loader_instance *inst, u
     return result;
 }
 
-VkResult windows_get_registry_files(const struct loader_instance *inst, char *location, bool use_secondary_hive, char **reg_data,
+VkResult windows_get_registry_files(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char *location, bool use_secondary_hive, char **reg_data,
                                     PDWORD reg_data_size) {
     // This list contains all of the allowed ICDs. This allows us to verify that a device is actually present from the vendor
     // specified. This does disallow other vendors, but any new driver should use the device-specific registries anyway.
@@ -575,7 +575,7 @@ out:
 }
 
 // Read manifest JSON files using the Windows driver interface
-VkResult windows_read_manifest_from_d3d_adapters(const struct loader_instance *inst, char **reg_data, PDWORD reg_data_size,
+VkResult windows_read_manifest_from_d3d_adapters(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char **reg_data, PDWORD reg_data_size,
                                                  const wchar_t *value_name) {
     VkResult result = VK_INCOMPLETE;
     LoaderEnumAdapters2 adapters = {.adapter_count = 0, .adapters = NULL};
@@ -707,7 +707,7 @@ out:
 }
 
 // Look for data files in the registry.
-VkResult windows_read_data_files_in_registry(const struct loader_instance *inst, enum loader_data_files_type data_file_type,
+VkResult windows_read_data_files_in_registry(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, enum loader_data_files_type data_file_type,
                                              bool warn_if_not_present, char *registry_location,
                                              struct loader_string_list *out_files) {
     VkResult vk_result = VK_SUCCESS;
@@ -1096,7 +1096,7 @@ VkResult windows_sort_physical_device_groups(struct loader_instance *inst, const
     return VK_SUCCESS;
 }
 
-char *windows_get_app_package_manifest_path(const struct loader_instance *inst) {
+char *windows_get_app_package_manifest_path(ALLOC_AND_LOG_ONLY const struct loader_instance *inst) {
     // These functions are only available on Windows 8 and above, load them dynamically for compatibility with Windows 7
     typedef LONG(WINAPI * PFN_GetPackagesByPackageFamily)(PCWSTR, UINT32 *, PWSTR *, UINT32 *, WCHAR *);
     PFN_GetPackagesByPackageFamily fpGetPackagesByPackageFamily =
@@ -1169,7 +1169,7 @@ cleanup:
     return ret;
 }
 
-VkResult get_settings_path_if_exists_in_registry_key(const struct loader_instance *inst, char **out_path, HKEY key) {
+VkResult get_settings_path_if_exists_in_registry_key(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char **out_path, HKEY key) {
     VkResult result = VK_ERROR_INITIALIZATION_FAILED;
 
     char name[MAX_STRING_SIZE] = {0};
@@ -1218,7 +1218,7 @@ VkResult get_settings_path_if_exists_in_registry_key(const struct loader_instanc
     return result;
 }
 
-VkResult windows_get_loader_settings_file_path(const struct loader_instance *inst, char **out_path) {
+VkResult windows_get_loader_settings_file_path(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char **out_path) {
     VkResult result = VK_SUCCESS;
     DWORD access_flags = KEY_QUERY_VALUE;
     LONG rtn_value = 0;

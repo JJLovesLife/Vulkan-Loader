@@ -92,7 +92,7 @@ out:
     return res;
 }
 #elif COMMON_UNIX_PLATFORMS
-static VkResult loader_read_entire_file(const struct loader_instance *inst, const char *filename, size_t *out_len,
+static VkResult loader_read_entire_file(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, const char *filename, size_t *out_len,
                                         char **out_buff) {
     FILE *file = NULL;
     struct stat stats = {0};
@@ -136,7 +136,7 @@ VkResult loader_read_entire_file(const struct loader_instance *inst, const char 
 }
 #endif
 
-TEST_FUNCTION_EXPORT VkResult loader_get_json(const struct loader_instance *inst, const char *filename, cJSON **json) {
+TEST_FUNCTION_EXPORT VkResult loader_get_json(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, const char *filename, cJSON **json) {
     char *json_buf = NULL;
     VkResult res = VK_SUCCESS;
 
@@ -214,7 +214,7 @@ VkResult loader_parse_json_string(cJSON *object, const char *key, char **out_str
     }
     return VK_SUCCESS;
 }
-VkResult loader_parse_json_array_of_strings(const struct loader_instance *inst, cJSON *object, const char *key,
+VkResult loader_parse_json_array_of_strings(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, cJSON *object, const char *key,
                                             struct loader_string_list *string_list) {
     if (NULL == key) {
         return VK_ERROR_INITIALIZATION_FAILED;

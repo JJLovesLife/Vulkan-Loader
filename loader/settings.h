@@ -55,40 +55,41 @@ typedef enum loader_settings_layer_control {
 #define LOADER_SETTINGS_MAX_NAME_SIZE 256U;
 
 typedef struct loader_settings_layer_configuration {
-    char* name;
-    char* path;
-    loader_settings_layer_control control;
-    bool treat_as_implicit_manifest;  // whether or not the layer should be parsed as if it is implicit
+    char* name; // loader_settings:.settings.layers[].name
+    char* path; // loader_settings:.settings.layers[].path
+    loader_settings_layer_control control; // loader_settings:.settings.layers[].control
+    // 在 scan 的情况下，是否 implicit 由所在的文件夹 explicit_layer.d / implicit_layer.d 决定，但是 loader_settings 中没有文件夹这个概念，所以用一个 bool 来表示是 explicit / implicit
+    bool treat_as_implicit_manifest;  // whether or not the layer should be parsed as if it is implicit // loader_settings:.settings.layers[].treat_as_implicit_manifest
 
 } loader_settings_layer_configuration;
 
 typedef struct loader_settings_driver_configuration {
-    char* path;
+    char* path; // loader_settings:.settings.additional_drivers[].path
 } loader_settings_driver_configuration;
 
 typedef struct loader_settings_device_configuration {
-    uint8_t deviceUUID[VK_UUID_SIZE];
-    uint8_t driverUUID[VK_UUID_SIZE];
-    uint32_t driverVersion;
-    char deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
-    char driverName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+    uint8_t deviceUUID[VK_UUID_SIZE]; // loader_settings:.settings.device_configurations[].deviceUUID
+    uint8_t driverUUID[VK_UUID_SIZE]; // loader_settings:.settings.device_configurations[].driverUUID
+    uint32_t driverVersion; // loader_settings:.settings.device_configurations[].driverVersion
+    char deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]; // loader_settings:.settings.device_configurations[].deviceName
+    char driverName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]; // loader_settings:.settings.device_configurations[].driverName
 } loader_settings_device_configuration;
 
 typedef struct loader_settings {
-    bool settings_active;
-    bool has_unordered_layer_location;
-    enum vulkan_loader_debug_flags debug_level;
+    bool settings_active; // [derived]
+    bool has_unordered_layer_location; // [derived] any layers with unordered layer location control
+    enum vulkan_loader_debug_flags debug_level; // loader_settings:.settings.stderr_log
 
-    bool layer_configurations_active;
-    uint32_t layer_configuration_count;
-    loader_settings_layer_configuration* layer_configurations;
+    bool layer_configurations_active; // [derived] if layer_configurations is valid
+    uint32_t layer_configuration_count; // len(.layers)
+    loader_settings_layer_configuration* layer_configurations; // .layers
 
-    bool additional_drivers_use_exclusively;
-    uint32_t additional_driver_count;
-    loader_settings_driver_configuration* additional_drivers;
+    bool additional_drivers_use_exclusively; // loader_settings:.settings.additional_drivers_use_exclusively
+    uint32_t additional_driver_count; // len(.additional_drivers)
+    loader_settings_driver_configuration* additional_drivers; // .additional_drivers
 
-    bool device_configurations_active;
-    uint32_t device_configuration_count;
+    bool device_configurations_active; // [derived] if all item in device_configurations is object. still true if any item is invalid but just skipped
+    uint32_t device_configuration_count; // len(.device_configurations)
     loader_settings_device_configuration* device_configurations;
 
     char* settings_file_path;
@@ -103,7 +104,7 @@ VkResult get_loader_settings(const struct loader_instance* inst, loader_settings
 void free_loader_settings(const struct loader_instance* inst, loader_settings* loader_settings);
 
 // Log the settings to the console
-void log_settings(const struct loader_instance* inst, loader_settings* settings);
+void log_settings(const struct loader_instance* inst, const loader_settings* settings);
 
 // Every global function needs to call this at startup to insure that
 TEST_FUNCTION_EXPORT VkResult update_global_loader_settings(void);

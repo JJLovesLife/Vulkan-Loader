@@ -81,7 +81,7 @@ struct loader_extension_list {
 
 struct loader_dev_ext_props {
     VkExtensionProperties props;
-    struct loader_string_list entrypoints;
+    struct loader_string_list entrypoints; // layer_settings:.layers[].device_extensions[].entrypoints[]
 };
 
 struct loader_device_extension_list {
@@ -130,9 +130,10 @@ struct loader_name_value {
 };
 
 struct loader_layer_functions {
-    char *str_gipa;
-    char *str_gdpa;
-    char *str_negotiate_interface;
+    // str_negotiate_interface 是 str_gipa/str_gdpa 的新版本，见 LoaderLayerInterface.md#layer-version-negotiation
+    char *str_gipa; // layer_settings:.layers[].functions.vkGetInstanceProcAddr
+    char *str_gdpa; // layer_settings:.layers[].functions.vkGetDeviceProcAddr
+    char *str_negotiate_interface; // layer_settings:.layers[].functions.vkNegotiateLoaderLayerInterfaceVersion
     PFN_vkNegotiateLoaderLayerInterfaceVersion negotiate_layer_interface;
     PFN_vkGetInstanceProcAddr get_instance_proc_addr;
     PFN_vkGetDeviceProcAddr get_device_proc_addr;
@@ -174,32 +175,39 @@ enum loader_layer_enabled_by_what {
 };
 
 struct loader_layer_properties {
+    // layerName             loader_settings:.settings.layers[].name === layer_settings:.layers[].name
+    // specVersion           layer_settings:.layers[].api_version
+    // implementationVersion layer_settings:.layers[].implementation_version
+    // description           layer_settings:.layers[].description
     VkLayerProperties info;
+    // VK_LAYER_TYPE_FLAG_INSTANCE_LAYER always set (because device layers are deprecated)
+    // VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER set if `loader_settings:.settings.layers[].treat_as_implicit_manifest == false`
+    // VK_LAYER_TYPE_FLAG_META_LAYER     if lib_name == NULL (component_layer_names must not empty)
     enum layer_type_flags type_flags;
-    enum loader_settings_layer_control settings_control_value;
+    enum loader_settings_layer_control settings_control_value; // loader_settings:.settings.layers[].control
 
     uint32_t interface_version;  // PFN_vkNegotiateLoaderLayerInterfaceVersion
-    char *manifest_file_name;
-    char *lib_name;
+    char *manifest_file_name; // loader_settings:.settings.layers[].path
+    char *lib_name; // dir(manifest_file_name) + layer_settings:.layers[].library_path 大部分情况下，有些额外的 absolute 以及其他不太寻常的逻辑 see: combine_manifest_directory_and_library_path
     enum loader_layer_library_status lib_status;
     enum loader_layer_enabled_by_what enabled_by_what;
     loader_platform_dl_handle lib_handle;
     struct loader_layer_functions functions;
-    struct loader_extension_list instance_extension_list;
-    struct loader_device_extension_list device_extension_list;
-    struct loader_name_value disable_env_var;
-    struct loader_name_value enable_env_var;
-    struct loader_string_list component_layer_names;
+    struct loader_extension_list instance_extension_list; // layer_settings:.layers[].instance_extensions[] (过滤掉编译时没有支持的 window system)
+    struct loader_device_extension_list device_extension_list; // layer_settings:.layers[].device_extensions[]
+    struct loader_name_value disable_env_var; // (if implicit) layer_settings:.layers[].disable_environment
+    struct loader_name_value enable_env_var; // (if implicit) layer_settings:.layers[].enable_environment
+    struct loader_string_list component_layer_names; // layer_settings:.layers[].component_layers[]
     struct {
         char *enumerate_instance_extension_properties;
         char *enumerate_instance_layer_properties;
         char *enumerate_instance_version;
-    } pre_instance_functions;
-    struct loader_string_list override_paths;
-    bool is_override;
+    } pre_instance_functions; // layer_settings:.layers[].pre_instance_functions.*
+    struct loader_string_list override_paths; // layer_settings:.layers[].override_paths[]
+    bool is_override; // [derived] info.layerName == "VK_LAYER_LUNARG_override"
     bool keep;
-    struct loader_string_list blacklist_layer_names;
-    struct loader_string_list app_key_paths;
+    struct loader_string_list blacklist_layer_names; // (if is_override) layer_settings:.layers[].blacklisted_layers[]
+    struct loader_string_list app_key_paths; // (if is_override) layer_settings:.layers[].app_keys
 };
 
 // Stores a list of loader_layer_properties
@@ -303,6 +311,9 @@ struct loader_instance_dispatch_table {
 // Unique magic number identifier for the loader.
 #define LOADER_MAGIC_NUMBER 0x10ADED010110ADEDUL
 
+#define ALLOC_AND_LOG_ONLY
+#define NOT_ONLY_ALLOC_AND_LOG
+
 // Per instance structure
 struct loader_instance {
     struct loader_instance_dispatch_table *disp;  // must be first entry in structure
@@ -329,7 +340,7 @@ struct loader_instance {
     uint32_t phys_dev_group_count_term;
     struct VkPhysicalDeviceGroupProperties **phys_dev_groups_term;
 
-    struct loader_instance *next;
+    struct loader_instance *next; // global linked list of loader.instances
 
     uint32_t icd_terms_count;
     struct loader_icd_term *icd_terms;
@@ -346,7 +357,7 @@ struct loader_instance {
 
     struct loader_string_list enabled_layer_names;
 
-    struct loader_layer_list instance_layer_list;
+    struct loader_layer_list instance_layer_list; // 发现到的所有 layer
     bool override_layer_present;
 
     // List of activated layers.
@@ -354,13 +365,13 @@ struct loader_instance {
     //            This is what must be returned to the application on Enumerate calls.
     //  expanded_ is the version based on expanding meta-layers into their
     //            individual component layers.  This is what is used internally.
-    struct loader_pointer_layer_list app_activated_layer_list;
-    struct loader_pointer_layer_list expanded_activated_layer_list;
+    struct loader_pointer_layer_list app_activated_layer_list; // 除了普通 implicit layer, 还会包括 meta-layer (& its components)
+    struct loader_pointer_layer_list expanded_activated_layer_list; // 不包括 meta-layer，只有 components
 
     VkInstance instance;  // layers/ICD instance returned to trampoline
 
-    struct loader_extension_list ext_list;  // icds and loaders extensions
-    struct loader_instance_extension_enable_list enabled_extensions;
+    struct loader_extension_list ext_list;  // icds and loaders extensions // 可用的 exts
+    struct loader_instance_extension_enable_list enabled_extensions; // 哪些 instance extension 是启用的
 
     // Indicates which indices in the array are in-use and which are free to be reused
     struct loader_used_object_list surfaces_list;
@@ -378,7 +389,7 @@ struct loader_instance {
 
     loader_settings settings;
 
-    bool portability_enumeration_enabled;
+    bool portability_enumeration_enabled; // VK_KHR_portability_enumeration
 
     bool create_terminator_invalid_extension;
     bool supports_get_dev_prop_2;
@@ -456,14 +467,14 @@ struct loader_struct {
 };
 
 struct loader_scanned_icd {
-    char *lib_name;
-    loader_platform_dl_handle handle;
-    uint32_t api_version;
-    uint32_t interface_version;
-    PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
-    PFN_GetPhysicalDeviceProcAddr GetPhysicalDeviceProcAddr;
-    PFN_vkCreateInstance CreateInstance;
-    PFN_vkEnumerateInstanceExtensionProperties EnumerateInstanceExtensionProperties;
+    char *lib_name; // fullpath of the loaded library
+    loader_platform_dl_handle handle; // dlopen
+    uint32_t api_version; // icd.d/*.json:.ICD.api_version
+    uint32_t interface_version; // negotiated with icd.so`vk_icdNegotiateLoaderICDInterfaceVersion
+    PFN_vkGetInstanceProcAddr GetInstanceProcAddr; // icd.so`vk_icdGetInstanceProcAddr (with fallback)
+    PFN_GetPhysicalDeviceProcAddr GetPhysicalDeviceProcAddr; // icd.so`vk_icdGetPhysicalDeviceProcAddr
+    PFN_vkCreateInstance CreateInstance; // icd.so`vkCreateInstance
+    PFN_vkEnumerateInstanceExtensionProperties EnumerateInstanceExtensionProperties; // icd.so`vkEnumerateInstanceExtensionProperties
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     PFN_vk_icdEnumerateAdapterPhysicalDevices EnumerateAdapterPhysicalDevices;
 #endif

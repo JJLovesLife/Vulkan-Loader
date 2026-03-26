@@ -38,18 +38,18 @@
 loader_platform_thread_mutex global_loader_settings_lock;
 loader_settings global_loader_settings;
 
-void free_layer_configuration(const struct loader_instance* inst, loader_settings_layer_configuration* layer_configuration) {
+void free_layer_configuration(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, loader_settings_layer_configuration* layer_configuration) {
     loader_instance_heap_free(inst, layer_configuration->name);
     loader_instance_heap_free(inst, layer_configuration->path);
     memset(layer_configuration, 0, sizeof(loader_settings_layer_configuration));
 }
 
-void free_driver_configuration(const struct loader_instance* inst, loader_settings_driver_configuration* driver_configuration) {
+void free_driver_configuration(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, loader_settings_driver_configuration* driver_configuration) {
     loader_instance_heap_free(inst, driver_configuration->path);
     memset(driver_configuration, 0, sizeof(loader_settings_driver_configuration));
 }
 
-void free_device_configuration(const struct loader_instance* inst, loader_settings_device_configuration* device_configuration) {
+void free_device_configuration(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, loader_settings_device_configuration* device_configuration) {
     (void)inst;
     memset(device_configuration, 0, sizeof(loader_settings_device_configuration));
 }
@@ -143,7 +143,7 @@ bool parse_json_enable_disable_option(cJSON* object) {
     return enable;
 }
 
-VkResult parse_layer_configuration(const struct loader_instance* inst, cJSON* layer_configuration_json,
+VkResult parse_layer_configuration(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, cJSON* layer_configuration_json,
                                    loader_settings_layer_configuration* layer_configuration) {
     char* control_string = NULL;
     VkResult res = loader_parse_json_string(layer_configuration_json, "control", &control_string);
@@ -179,7 +179,7 @@ out:
     return res;
 }
 
-VkResult parse_layer_configurations(const struct loader_instance* inst, cJSON* settings_object, loader_settings* loader_settings) {
+VkResult parse_layer_configurations(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, cJSON* settings_object, loader_settings* loader_settings) {
     VkResult res = VK_SUCCESS;
 
     cJSON* layer_configurations = loader_cJSON_GetObjectItem(settings_object, "layers");
@@ -231,7 +231,7 @@ out:
     return res;
 }
 
-VkResult parse_additional_driver(const struct loader_instance* inst, cJSON* additional_driver_json,
+VkResult parse_additional_driver(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, cJSON* additional_driver_json,
                                  loader_settings_driver_configuration* additional_driver) {
     VkResult res = VK_SUCCESS;
     res = loader_parse_json_string(additional_driver_json, "path", &(additional_driver->path));
@@ -245,7 +245,7 @@ out:
     return res;
 }
 
-VkResult parse_additional_drivers(const struct loader_instance* inst, cJSON* settings_object, loader_settings* loader_settings) {
+VkResult parse_additional_drivers(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, cJSON* settings_object, loader_settings* loader_settings) {
     VkResult res = VK_SUCCESS;
 
     cJSON* additional_drivers_use_exclusively_json =
@@ -331,7 +331,7 @@ VkResult parse_uuid_array(cJSON* device_configuration_json, const char* uuid_nam
     return VK_SUCCESS;
 }
 
-VkResult parse_device_configuration(const struct loader_instance* inst, cJSON* device_configuration_json,
+VkResult parse_device_configuration(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, cJSON* device_configuration_json,
                                     loader_settings_device_configuration* device_configuration) {
     (void)inst;
     VkResult res = VK_SUCCESS;
@@ -372,7 +372,7 @@ out:
     return res;
 }
 
-VkResult parse_device_configurations(const struct loader_instance* inst, cJSON* settings_object, loader_settings* loader_settings) {
+VkResult parse_device_configurations(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, cJSON* settings_object, loader_settings* loader_settings) {
     VkResult res = VK_SUCCESS;
 
     cJSON* device_configurations = loader_cJSON_GetObjectItem(settings_object, "device_configurations");
@@ -429,7 +429,7 @@ out:
 // Given a base and suffix path, determine if a file at that location exists, and if it is return success.
 // Since base may contain multiple paths separated by PATH_SEPARATOR, we must extract each segment and check segment + suffix
 // individually
-VkResult check_if_settings_path_exists(const struct loader_instance* inst, const char* base, const char* suffix,
+VkResult check_if_settings_path_exists(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, const char* base, const char* suffix,
                                        char** settings_file_path) {
     if (NULL == base || NULL == suffix) {
         return VK_ERROR_INITIALIZATION_FAILED;
@@ -471,7 +471,7 @@ VkResult check_if_settings_path_exists(const struct loader_instance* inst, const
 }
 
 // Follow the logic of read_data_files_in_search_paths but only look for "/vulkan/loader_settings.d/" VK_LOADER_SETTINGS_FILENAME
-VkResult get_unix_settings_path(const struct loader_instance* inst, char** settings_file_path) {
+VkResult get_unix_settings_path(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, char** settings_file_path) {
     // First, get XDG env-vars we use. Don't need to worry about free'ing because on linux getenv is non-allocating
     char* xdg_config_home = loader_secure_getenv("XDG_CONFIG_HOME", inst);
     char* xdg_config_dirs = loader_secure_getenv("XDG_CONFIG_DIRS", inst);
@@ -607,7 +607,7 @@ bool check_if_settings_are_equal(loader_settings* a, loader_settings* b) {
     return are_equal;
 }
 
-void log_settings(const struct loader_instance* inst, loader_settings* settings) {
+void log_settings(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, const loader_settings* settings) {
     if (settings == NULL) {
         return;
     }
@@ -674,7 +674,7 @@ void log_settings(const struct loader_instance* inst, loader_settings* settings)
 // Loads the vk_loader_settings.json file
 // Returns VK_SUCCESS if it was found & was successfully parsed. Otherwise, it returns VK_ERROR_INITIALIZATION_FAILED if it
 // wasn't found or failed to parse, and returns VK_ERROR_OUT_OF_HOST_MEMORY if it was unable to allocate enough memory.
-VkResult get_loader_settings(const struct loader_instance* inst, loader_settings* loader_settings) {
+VkResult get_loader_settings(ALLOC_AND_LOG_ONLY const struct loader_instance* inst, loader_settings* loader_settings) {
     VkResult res = VK_SUCCESS;
     cJSON* json = NULL;
     char* file_format_version_string = NULL;
@@ -854,6 +854,7 @@ VkResult get_loader_settings(const struct loader_instance* inst, loader_settings
 
     // Only consider the settings active if there is at least one "setting" active.
     // Those are either logging, layers, additional_drivers, or device_configurations.
+    // TODO(JJ): should additional_drivers_use_exclusively be considered
     if (loader_settings->debug_level != 0 || loader_settings->layer_configurations_active ||
         loader_settings->additional_driver_count != 0 || loader_settings->device_configurations_active) {
         loader_settings->settings_file_path = settings_file_path;
@@ -927,6 +928,8 @@ void release_current_settings_lock(const struct loader_instance* inst) {
     }
 }
 
+// inst is ALLOC_AND_LOG_ONLY + readonly setting access
+// 从 inst->settings.layer_configurations + path 指向的 JSON 文件构建出一个 typed version 的 layer list (aka settings_layers) + should_search_for_other_layers
 TEST_FUNCTION_EXPORT VkResult get_settings_layers(const struct loader_instance* inst, struct loader_layer_list* settings_layers,
                                                   bool* should_search_for_other_layers) {
     VkResult res = VK_SUCCESS;

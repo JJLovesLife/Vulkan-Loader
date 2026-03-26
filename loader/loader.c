@@ -245,7 +245,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetDeviceDispatch(VkDevice device, void *object
     return VK_SUCCESS;
 }
 
-void loader_free_layer_properties(const struct loader_instance *inst, struct loader_layer_properties *layer_properties) {
+void loader_free_layer_properties(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_layer_properties *layer_properties) {
     loader_instance_heap_free(inst, layer_properties->manifest_file_name);
     loader_instance_heap_free(inst, layer_properties->lib_name);
     loader_instance_heap_free(inst, layer_properties->functions.str_gipa);
@@ -284,7 +284,7 @@ VkResult loader_init_library_list(struct loader_layer_list *instance_layers, loa
     return VK_SUCCESS;
 }
 
-VkResult loader_copy_to_new_str(const struct loader_instance *inst, const char *source_str, char **dest_str) {
+VkResult loader_copy_to_new_str(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, const char *source_str, char **dest_str) {
     assert(source_str && dest_str);
     size_t str_len = strlen(source_str) + 1;
     *dest_str = loader_instance_heap_calloc(inst, str_len, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
@@ -294,7 +294,7 @@ VkResult loader_copy_to_new_str(const struct loader_instance *inst, const char *
     return VK_SUCCESS;
 }
 
-VkResult create_string_list(const struct loader_instance *inst, uint32_t allocated_count, struct loader_string_list *string_list) {
+VkResult create_string_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, uint32_t allocated_count, struct loader_string_list *string_list) {
     assert(string_list);
     string_list->list = loader_instance_heap_calloc(inst, sizeof(char *) * allocated_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == string_list->list) {
@@ -305,7 +305,7 @@ VkResult create_string_list(const struct loader_instance *inst, uint32_t allocat
     return VK_SUCCESS;
 }
 
-VkResult increase_str_capacity_by_at_least_one(const struct loader_instance *inst, struct loader_string_list *string_list) {
+VkResult increase_str_capacity_by_at_least_one(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_string_list *string_list) {
     assert(string_list);
     if (string_list->allocated_count == 0) {
         string_list->allocated_count = 32;
@@ -327,7 +327,7 @@ VkResult increase_str_capacity_by_at_least_one(const struct loader_instance *ins
     return VK_SUCCESS;
 }
 
-VkResult append_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str) {
+VkResult append_str_to_string_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_string_list *string_list, char *str) {
     assert(string_list && str);
     VkResult res = increase_str_capacity_by_at_least_one(inst, string_list);
     if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
@@ -376,7 +376,7 @@ VkResult copy_str_to_start_of_string_list(const struct loader_instance *inst, st
     return prepend_str_to_string_list(inst, string_list, new_str);
 }
 
-void free_string_list(const struct loader_instance *inst, struct loader_string_list *string_list) {
+void free_string_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_string_list *string_list) {
     assert(string_list);
     if (string_list->list) {
         for (uint32_t i = 0; i < string_list->count; i++) {
@@ -724,7 +724,7 @@ bool has_vk_dev_ext_property(const VkExtensionProperties *ext_prop, const struct
     return false;
 }
 
-VkResult loader_append_layer_property(const struct loader_instance *inst, struct loader_layer_list *layer_list,
+VkResult loader_append_layer_property(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_layer_list *layer_list,
                                       struct loader_layer_properties *layer_property) {
     VkResult res = VK_SUCCESS;
     if (layer_list->capacity == 0) {
@@ -835,7 +835,7 @@ TEST_FUNCTION_EXPORT void loader_delete_layer_list_and_properties(const struct l
     memset(layer_list, 0, sizeof(struct loader_layer_list));
 }
 
-void loader_remove_layer_in_list(const struct loader_instance *inst, struct loader_layer_list *layer_list,
+void loader_remove_layer_in_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_layer_list *layer_list,
                                  uint32_t layer_to_remove) {
     if (layer_list == NULL || layer_to_remove >= layer_list->count) {
         return;
@@ -934,7 +934,7 @@ void loader_remove_layers_not_in_implicit_meta_layers(const struct loader_instan
     }
 }
 
-VkResult loader_add_instance_extensions(const struct loader_instance *inst,
+VkResult loader_add_instance_extensions(ALLOC_AND_LOG_ONLY const struct loader_instance *inst,
                                         const PFN_vkEnumerateInstanceExtensionProperties fp_get_props, const char *lib_name,
                                         struct loader_extension_list *ext_list) {
     uint32_t i, count = 0;
@@ -1032,7 +1032,7 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
     return VK_SUCCESS;
 }
 
-VkResult loader_init_generic_list(const struct loader_instance *inst, struct loader_generic_list *list_info, size_t element_size) {
+VkResult loader_init_generic_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_generic_list *list_info, size_t element_size) {
     size_t capacity = 32 * element_size;
     list_info->count = 0;
     list_info->capacity = 0;
@@ -1057,7 +1057,7 @@ VkResult loader_resize_generic_list(const struct loader_instance *inst, struct l
     return VK_SUCCESS;
 }
 
-void loader_destroy_generic_list(const struct loader_instance *inst, struct loader_generic_list *list) {
+void loader_destroy_generic_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_generic_list *list) {
     loader_instance_heap_free(inst, list->list);
     memset(list, 0, sizeof(struct loader_generic_list));
 }
@@ -1112,7 +1112,7 @@ void loader_release_object_from_list(struct loader_used_object_list *list_info, 
 
 // Append non-duplicate extension properties defined in props to the given ext_list.
 // Return - Vk_SUCCESS on success
-VkResult loader_add_to_ext_list(const struct loader_instance *inst, struct loader_extension_list *ext_list,
+VkResult loader_add_to_ext_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_extension_list *ext_list,
                                 uint32_t prop_list_count, const VkExtensionProperties *props) {
     if (ext_list->list == NULL || ext_list->capacity == 0) {
         VkResult res = loader_init_generic_list(inst, (struct loader_generic_list *)ext_list, sizeof(VkExtensionProperties));
@@ -1155,7 +1155,7 @@ VkResult loader_add_to_ext_list(const struct loader_instance *inst, struct loade
 // ext_list. Do not append if a duplicate.
 // If this is a duplicate, this function free's the passed in entries - as in it takes ownership over that list (if it is not
 // NULL) Return - Vk_SUCCESS on success
-VkResult loader_add_to_dev_ext_list(const struct loader_instance *inst, struct loader_device_extension_list *ext_list,
+VkResult loader_add_to_dev_ext_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_device_extension_list *ext_list,
                                     const VkExtensionProperties *props, struct loader_string_list *entrys) {
     VkResult res = VK_SUCCESS;
     bool should_free_entrys = true;
@@ -1204,7 +1204,7 @@ out:
 }
 
 // Create storage for pointers to loader_layer_properties
-bool loader_init_pointer_layer_list(const struct loader_instance *inst, struct loader_pointer_layer_list *list) {
+bool loader_init_pointer_layer_list(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_pointer_layer_list *list) {
     list->capacity = 32 * sizeof(void *);
     list->list = loader_instance_heap_calloc(inst, list->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (list->list == NULL) {
@@ -1240,7 +1240,7 @@ VkResult loader_add_layer_properties_to_list(const struct loader_instance *inst,
     }
 
     // Check for enough capacity
-    if (((list->count + 1) * sizeof(struct loader_layer_properties)) >= list->capacity) {
+    if (((list->count + 1) * sizeof(struct loader_layer_properties *)) >= list->capacity) {
         size_t new_capacity = list->capacity * 2;
         void *new_ptr =
             loader_instance_heap_realloc(inst, list->list, list->capacity, new_capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
@@ -1383,6 +1383,8 @@ bool loader_implicit_layer_is_enabled(const struct loader_instance *inst, const 
     } else if ((prop->type_flags & VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER) == 0) {
         loader_log(inst, VULKAN_LOADER_WARN_BIT | VULKAN_LOADER_LAYER_BIT, 0,
                    "Implicit layer \"%s\" missing disabled environment variable!", prop->info.layerName);
+    } else {
+        assert(0 && "loader_implicit_layer_is_enabled called for explicit layer");
     }
 
     // Enable this layer if it is included in the override layer
@@ -1406,7 +1408,7 @@ bool loader_implicit_layer_is_enabled(const struct loader_instance *inst, const 
 
     return enable;
 }
-
+// inst->override_layer_present 会被读取
 // Check the individual implicit layer for the enable/disable environment variable settings.  Only add it after
 // every check has passed indicating it should be used, including making sure a layer of the same name hasn't already been
 // added.
@@ -1541,7 +1543,9 @@ VkExtensionProperties *get_dev_extension_property(const char *name, const struct
 //                                    to this array.
 // The extension itself should be in a separate file that will be linked directly
 // with the loader.
-VkResult loader_get_icd_loader_instance_extensions(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list,
+//
+// 读取 ICD 提供的 instqance 扩展 (icd.so`vkEnumerateInstanceExtensionProperties) + loader 自身实现的 instance 扩展 => inst_exts
+VkResult loader_get_icd_loader_instance_extensions(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list,
                                                    struct loader_extension_list *inst_exts) {
     struct loader_extension_list icd_exts;
     VkResult res = VK_SUCCESS;
@@ -2400,8 +2404,12 @@ char *loader_get_next_path(char *path) {
  * If library_path is an absolute path, we do not prepend the base path of manifest_file_path
  *
  * This function takes ownership of library_path - caller does not need to worry about freeing it.
+ *
+ * 1. library_path 绝对路径 => library_path
+ * 2. library_path 只有文件名，即不包含目录符号 => library_path (相当于说使用动态链接器的默认搜索路径)
+ * 3. library_path 是一个相对路径 => dir(manifest_file_path) + library_path
  */
-VkResult combine_manifest_directory_and_library_path(const struct loader_instance *inst, char *library_path,
+VkResult combine_manifest_directory_and_library_path(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char *library_path,
                                                      const char *manifest_file_path, char **out_fullpath) {
     assert(library_path && manifest_file_path && out_fullpath);
     if (loader_platform_is_path_absolute(library_path)) {
@@ -2656,10 +2664,12 @@ VkResult verify_all_meta_layers(struct loader_instance *inst, const struct loade
     }
     return res;
 }
-
+// 尝试只保留第一个生效的 override layer, 删除所有其他的 override layer 但是有 bug, 只能说第一个 override layer 是生效的
 // If the current working directory matches any app_key_path of the layers, remove all other override layers.
 // Otherwise if no matching app_key was found, remove all but the global override layer, which has no app_key_path.
-void remove_all_non_valid_override_layers(struct loader_instance *inst, struct loader_layer_list *instance_layers) {
+// 1. 第一个 gloabl override layer (即无 app_keys[])
+// 其它 override layer 会从 instance_layers 中被移除
+void remove_all_non_valid_override_layers(ALLOC_AND_LOG_ONLY struct loader_instance *inst, struct loader_layer_list *instance_layers) {
     if (instance_layers == NULL) {
         return;
     }
@@ -2690,11 +2700,11 @@ void remove_all_non_valid_override_layers(struct loader_instance *inst, struct l
 
                             // Remove duplicate active override layers that have the same app_key_path
                             loader_remove_layer_in_list(inst, instance_layers, i);
-                            i--;
+                            i--; // 这里也有bug，要 goto
                         }
                     }
                 }
-                if (!found_active_override_layer) {
+                if (!found_active_override_layer) { // 是不是又有问题？如果有一个 match 的 override layer，之后的 override layer 都不会被保留。
                     loader_log(inst, VULKAN_LOADER_INFO_BIT | VULKAN_LOADER_LAYER_BIT, 0,
                                "--Override layer found but not used because app \'%s\' is not in \'app_keys\' list!", cur_path);
 
@@ -2738,8 +2748,9 @@ void remove_all_non_valid_override_layers(struct loader_instance *inst, struct l
  * "description"
  * (for implicit layers) "disable_environment"
  */
-
-VkResult loader_read_layer_json(const struct loader_instance *inst, struct loader_layer_list *layer_instance_list,
+// 解析 layer JSON object 成 loader_layer_properties 结构体，并添加到 layer_instance_list 中
+// [filename] 1. prop.manifest_file_name 2. 作为 relative path 时的 base path
+VkResult loader_read_layer_json(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_layer_list *layer_instance_list,
                                 cJSON *layer_node, loader_api_version version, bool is_implicit, char *filename) {
     assert(layer_instance_list);
     char *library_path = NULL;
@@ -2782,7 +2793,7 @@ VkResult loader_read_layer_json(const struct loader_instance *inst, struct loade
     }
 
     // Add list entry
-    if (!strcmp(type, "DEVICE")) {
+    if (!strcmp(type, "DEVICE")) { // LoaderLayerInterface.md#layer-manifest-file-format > type
         loader_log(inst, VULKAN_LOADER_WARN_BIT | VULKAN_LOADER_LAYER_BIT, 0, "Device layers are deprecated. Skipping layer %s",
                    props.info.layerName);
         result = VK_ERROR_INITIALIZATION_FAILED;
@@ -3165,7 +3176,10 @@ bool is_valid_layer_json_version(const loader_api_version *layer_json) {
 // layer_list has a new entry and initialized accordingly.
 // If the json input object does not have all the required fields no entry
 // is added to the list.
-VkResult loader_add_layer_properties(const struct loader_instance *inst, struct loader_layer_list *layer_instance_list, cJSON *json,
+//
+// 对 manifest JSON 文件读取出来的 (调用者负责解析 JSON) json object 的 layers / layer 节点调用 loader_read_layer_json 输出到 layer_instance_list
+//   负责了 JSON 文件的版本检查和不同版本(layer结点以外的)逻辑处理， layer 节点的版本处理由 loader_read_layer_json 负责
+VkResult loader_add_layer_properties(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, struct loader_layer_list *layer_instance_list, cJSON *json,
                                      bool is_implicit, char *filename) {
     // The following Fields in layer manifest file that are required:
     //   - "file_format_version"
@@ -3319,7 +3333,7 @@ void copy_data_file_info(const char *cur_path, const char *relative_path, size_t
 }
 
 // If the file found is a manifest file name, add it to the end of out_files manifest list.
-VkResult add_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files) {
+VkResult add_if_manifest_file(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files) {
     assert(NULL != file_name && "add_if_manifest_file: Received NULL pointer for file_name");
     assert(NULL != out_files && "add_if_manifest_file: Received NULL pointer for out_files");
 
@@ -3349,10 +3363,10 @@ VkResult prepend_if_manifest_file(const struct loader_instance *inst, const char
 
     return copy_str_to_start_of_string_list(inst, out_files, file_name, name_len);
 }
-
+// 扫描目录，调用 `add_if_manifest_file`
 // Add any files found in the search_path.  If any path in the search path points to a specific JSON, attempt to
 // only open that one JSON.  Otherwise, if the path is a folder, search the folder for JSON files.
-VkResult add_data_files(const struct loader_instance *inst, char *search_path, struct loader_string_list *out_files) {
+VkResult add_data_files(ALLOC_AND_LOG_ONLY const struct loader_instance *inst, char *search_path, struct loader_string_list *out_files) {
     VkResult vk_result = VK_SUCCESS;
     char full_path[2048];
 #if !defined(_WIN32)
@@ -3388,8 +3402,8 @@ VkResult add_data_files(const struct loader_instance *inst, char *search_path, s
 #else
 #warning add_data_files must define relative path copy for this platform
 #endif
-            loader_get_fullpath(cur_file, name, sizeof(full_path), full_path);
-            name = full_path;
+            // loader_get_fullpath(cur_file, name, sizeof(full_path), full_path); // cur_file == name, why call this? It just try cur_file/cur_file, which don't make sence as cur_file is json.
+            // name = full_path;
 
             VkResult local_res;
             local_res = add_if_manifest_file(inst, name, out_files);
@@ -3448,7 +3462,15 @@ out:
 
 // Look for data files in the provided paths, but first check the environment override to determine if we should use that
 // instead.
-VkResult read_data_files_in_search_paths(const struct loader_instance *inst, enum loader_data_files_type manifest_type,
+//
+// [layer] 根据环境变量计算应该去哪些目录查找 Layer manifest, 然后调用 `add_data_files`
+//
+// override_active == true if override layer 指定了 override_paths || 使用了对应 manifest 的 override env var. 或者说，是否搜索了默认路径
+//
+// [manifest_type == LOADER_DATA_FILE_MANIFEST_DRIVER] inst->settings.device_configurations_active 会被读取以决定一些环境变量是否应该被使用
+// [else] ALLOC_AND_LOG_ONLY
+// path_override == null if manifest_type == LOADER_DATA_FILE_MANIFEST_IMPLICIT_LAYER
+VkResult read_data_files_in_search_paths(NOT_ONLY_ALLOC_AND_LOG const struct loader_instance *inst, enum loader_data_files_type manifest_type,
                                          const char *path_override, bool *override_active, struct loader_string_list *out_files) {
     VkResult vk_result = VK_SUCCESS;
     char *override_env = NULL;
@@ -3835,7 +3857,11 @@ out:
 // Linux ICD  | dirs     | files
 // Linux Layer| dirs     | dirs
 
-VkResult loader_get_data_files(const struct loader_instance *inst, enum loader_data_files_type manifest_type,
+// [layer] 根据对应 manifest_type 的环境变量去扫描对应目录下的 JSON 文件，然后把文件路径添加到 out_files 中
+// path_override 是 explicit layer 时候额外的一个 "环境变量" (实际上是 override layer的参数)，用来调整扫描的目录。
+// [manifest_type == LOADER_DATA_FILE_MANIFEST_DRIVER] inst->settings.device_configurations_active 会被读取以决定一些环境变量是否应该被使用
+// [else] 
+VkResult loader_get_data_files(NOT_ONLY_ALLOC_AND_LOG const struct loader_instance *inst, enum loader_data_files_type manifest_type,
                                const char *path_override, struct loader_string_list *out_files) {
     VkResult res = VK_SUCCESS;
     bool override_active = false;
@@ -4194,7 +4220,13 @@ out:
 // Gets the layer data files corresponding to manifest_type & path_override, then parses the resulting json objects
 // into instance_layers
 // Manifest type must be either implicit or explicit
-VkResult loader_parse_instance_layers(struct loader_instance *inst, enum loader_data_files_type manifest_type,
+//
+// [layer] 根据对应 manifest_type 的环境变量去扫描对应目录下的 JSON 文件，然后把读取 JSON 文件 (loader_add_layer_properties) 到 instance_layers
+// path_override 是 explicit layer 时候额外的一个 "环境变量" (实际上是 override layer的参数)，用来调整扫描的目录。
+//
+// 因为 manifest_type 的 assert, 所以 inst is ALLOC_AND_LOG_ONLY
+// path_override == null if manifest_type == LOADER_DATA_FILE_MANIFEST_IMPLICIT_LAYER
+VkResult loader_parse_instance_layers(ALLOC_AND_LOG_ONLY struct loader_instance *inst, enum loader_data_files_type manifest_type,
                                       const char *path_override, struct loader_layer_list *instance_layers) {
     assert(manifest_type == LOADER_DATA_FILE_MANIFEST_IMPLICIT_LAYER || manifest_type == LOADER_DATA_FILE_MANIFEST_EXPLICIT_LAYER);
     VkResult res = VK_SUCCESS;
@@ -4289,7 +4321,13 @@ void loader_remove_duplicate_layers(struct loader_instance *inst, struct loader_
         }
     }
 }
-
+/*
+- 读取 vk_loader_settings.json 中的 layer
+- 如果不允许自动扫描的 layer, return
+- 扫描硬盘 implicit layer.
+- ...
+[OUT] instance_layers
+*/
 VkResult loader_scan_for_layers(struct loader_instance *inst, struct loader_layer_list *instance_layers,
                                 const struct loader_envvar_all_filters *filters) {
     VkResult res = VK_SUCCESS;
@@ -4304,6 +4342,9 @@ VkResult loader_scan_for_layers(struct loader_instance *inst, struct loader_laye
         goto out;
     }
 
+    // Q: 不应该根据 filters 再次过滤 settings_layers 吗？ `loader_scan_for_implicit_layers` 里面就是有这个逻辑的。
+    // Q: remove_all_non_valid_override_layers 不需要调用以移除 app_keys 不对的 override layer 吗？
+
     // If we should not look for layers using other mechanisms, assign settings_layers to instance_layers and jump to the
     // output
     if (!should_search_for_other_layers) {
@@ -4311,7 +4352,7 @@ VkResult loader_scan_for_layers(struct loader_instance *inst, struct loader_laye
         memset(&settings_layers, 0, sizeof(struct loader_layer_list));
         goto out;
     }
-
+    // 1. 因为没有禁止自动发现的layer,所以扫描硬盘
     res = loader_parse_instance_layers(inst, LOADER_DATA_FILE_MANIFEST_IMPLICIT_LAYER, NULL, &regular_instance_layers);
     if (VK_SUCCESS != res) {
         goto out;
@@ -4375,6 +4416,7 @@ out:
 
 VkResult loader_scan_for_implicit_layers(struct loader_instance *inst, struct loader_layer_list *instance_layers,
                                          const struct loader_envvar_all_filters *layer_filters) {
+    assert(inst == NULL);
     VkResult res = VK_SUCCESS;
     struct loader_layer_list settings_layers = {0};
     struct loader_layer_list regular_instance_layers = {0};
@@ -4675,7 +4717,12 @@ loader_platform_dl_handle loader_open_layer_file(const struct loader_instance *i
 
     return prop->lib_handle;
 }
-
+/*
+source_list: 待加入的 layer list
+enabled_layers_env: 环境变量中的 layer 需要放到后面，所以要检查是否待加入的是否是这里面，是的话先跳过
+[out] target_list: 包括 meta-layer
+[out] expanded_target_list: 只包括 component layer (explicit meta layer)
+*/
 // Go through the search_list and find any layers which match type. If layer
 // type match is found in then add it to ext_list.
 // If the layer name is in enabled_layers_env, do not add it to the list, that way it can be ordered alongside the other env-var
@@ -4689,6 +4736,7 @@ VkResult loader_add_implicit_layers(const struct loader_instance *inst, const ch
         if (0 == (prop->type_flags & VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER)) {
             // If this layer appears in the enabled_layers_env, don't add it. We will let loader_add_environment_layers handle it
             if (NULL == enabled_layers_env || NULL == strstr(enabled_layers_env, prop->info.layerName)) {
+                // 这里 source_list 透传的原因是因为 meta-layer 的 component 是 name, 需要在 source_list 中查找到 property pointer
                 VkResult result = loader_add_implicit_layer(inst, prop, filters, target_list, expanded_target_list, source_list);
                 if (result == VK_ERROR_OUT_OF_HOST_MEMORY) return result;
             }
@@ -5607,7 +5655,7 @@ VkResult loader_validate_layers(const struct loader_instance *inst, const uint32
     }
     return VK_SUCCESS;
 }
-
+// instance_layers 从 setting + 环境变量读取的 layer list
 VkResult loader_validate_instance_extensions(struct loader_instance *inst, const struct loader_extension_list *icd_exts,
                                              const struct loader_layer_list *instance_layers,
                                              const struct loader_envvar_all_filters *layer_filters,
@@ -5618,8 +5666,8 @@ VkResult loader_validate_instance_extensions(struct loader_instance *inst, const
     bool check_if_known = true;
     VkResult res = VK_SUCCESS;
 
-    struct loader_pointer_layer_list active_layers = {0};
-    struct loader_pointer_layer_list expanded_layers = {0};
+    struct loader_pointer_layer_list active_layers = {0}; // 除了普通 implicit layer, 还会包括 meta-layer (& its components)
+    struct loader_pointer_layer_list expanded_layers = {0}; // 不包括 meta-layer，只有 components
 
     if (pCreateInfo->enabledExtensionCount > 0 && pCreateInfo->ppEnabledExtensionNames == NULL) {
         loader_log(inst, VULKAN_LOADER_ERROR_BIT, 0,
@@ -5645,19 +5693,21 @@ VkResult loader_validate_instance_extensions(struct loader_instance *inst, const
         }
     } else {
         enabled_layers_env = loader_getenv(ENABLED_LAYERS_ENV, inst);
-
+// 1. 加入隐式层（包括 meta-layer）
         // Build the lists of active layers (including meta layers) and expanded layers (with meta layers resolved to their
         // components)
-        res =
+        res = // 这里传入 enabled_layers_env, 是为了跳过 name == enabled_layers_env 的隐式层，因为它们应该放在后面
             loader_add_implicit_layers(inst, enabled_layers_env, layer_filters, &active_layers, &expanded_layers, instance_layers);
         if (res != VK_SUCCESS) {
             goto out;
         }
+// 2. 加入环境变量指定的层
         res = loader_add_environment_layers(inst, enabled_layers_env, layer_filters, &active_layers, &expanded_layers,
                                             instance_layers);
         if (res != VK_SUCCESS) {
             goto out;
         }
+// 3. 加入 ppEnabledLayerNames 指定的层
         res = loader_add_layer_names_to_list(inst, layer_filters, &active_layers, &expanded_layers, pCreateInfo->enabledLayerCount,
                                              pCreateInfo->ppEnabledLayerNames, instance_layers);
         if (VK_SUCCESS != res) {

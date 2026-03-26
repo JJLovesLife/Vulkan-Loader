@@ -602,7 +602,9 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     // enabledLayerCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
     // get layer list via loader_scan_for_layers().
     memset(&ptr_instance->instance_layer_list, 0, sizeof(ptr_instance->instance_layer_list));
+    // 这个是找到被允许使用(环境变量，setting等等)的 layer => instance_layer_list
     res = loader_scan_for_layers(ptr_instance, &ptr_instance->instance_layer_list, &layer_filters);
+    // inst->override_layer_present updated after here
     if (VK_SUCCESS != res) {
         goto out;
     }
@@ -657,6 +659,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     if (res != VK_SUCCESS) {
         goto out;
     }
+    // 检查 ppEnabledExtensionNames 是否是有效的 extension, 即某个 loader/ICD/layer 支持这个 extension
+    // 但是这里的实现很冗余，这个函数里面会实际构造最终的 layer (因为只有这些 layer 的 extension 才是有效的), 这个和 loader_enable_instance_layers 重复了。
     res = loader_validate_instance_extensions(ptr_instance, &ptr_instance->ext_list, &ptr_instance->instance_layer_list,
                                               &layer_filters, &ici);
     if (res != VK_SUCCESS) {
@@ -677,6 +681,9 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     loader.instances = ptr_instance;
 
     // Activate any layers on instance chain
+    // 这个是实际决定那些 layer 启用 inst->app_activated_layer_list, inst->expanded_activated_layer_list
+    // 尽管这里的逻辑和 loader_validate_instance_extensions 中重复了
+    // Q: ext真正的enable 逻辑在哪里？ A: 应该是每个 layer / ICD 自己处理
     res = loader_enable_instance_layers(ptr_instance, &ici, &ptr_instance->instance_layer_list, &layer_filters);
     if (res != VK_SUCCESS) {
         goto out;
