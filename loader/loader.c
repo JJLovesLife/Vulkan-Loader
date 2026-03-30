@@ -78,7 +78,7 @@
 
 struct loader_struct loader = {0};
 
-struct activated_layer_info {
+struct activated_layer_info { // 从 struct loader_layer_properties 读取过来的一些字段
     char *name;
     char *manifest;
     char *library;
@@ -225,6 +225,7 @@ void loader_handle_load_library_error(const struct loader_instance *inst, const 
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkSetInstanceDispatch(VkInstance instance, void *object) {
+    // 这里应该有个bug, loader_get_instance 预期 instance 应该是一个 loader_instance (因为它有一个 magic 的检查). 但是 instance 有可能是 layer wrapper 过之后的 instance, 它大概率不会有这个 magic (甚至可能是一个 out-of-bound read)
     struct loader_instance *inst = loader_get_instance(instance);
     if (!inst) {
         loader_log(inst, VULKAN_LOADER_ERROR_BIT, 0, "vkSetInstanceDispatch: Can not retrieve Instance dispatch table.");
@@ -4417,7 +4418,24 @@ out:
     loader_instance_heap_free(inst, override_paths);
     return res;
 }
-
+/*
+layers from setting file
+default:
+on:
+	if explicit -> drop
+	if inst->override_layer 包括该 layer -> keep
+	if disable_environment 环境变量匹配 -> drop
+	disabled via env -> drop
+		disable_all (`~all~`, `*`, `**`)
+		disabled_all_implicit (`~implicit~`)
+		disabled by name and not allowed by name, 类似这个集合 `{ disabled } \ { allowed }`
+		Note: 这里似乎有个不确定是 bug 还是 by design, 如何 enable 或者 force_enable 了，但是 disabled via env, override_layer 不会被检查。但是如果没有 enable / force_enable, 就算 disbaled via env, override_layer 也能强制 enable.
+	if enabled via env -> enable
+	else 如果设置 enable_environment 非空，则检查对应环境变量是否匹配，匹配则 enable
+	else 默认 enable
+off:
+	drop
+*/
 VkResult loader_scan_for_implicit_layers(struct loader_instance *inst, struct loader_layer_list *instance_layers,
                                          const struct loader_envvar_all_filters *layer_filters) {
     assert(inst == NULL);
@@ -5063,7 +5081,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, c
                        "loader_create_instance_chain: Failed to alloc Instance objects for layer");
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
-
+        // 这个只是这个函数中用于记录实际启用的 layer (尽管前面已经过滤过很多次了，但是这里仍然有可能过滤掉，主要是 layer so 文件不符合规范/加载失败) + 记录一些 log 需要的字段
         activated_layers = loader_stack_alloc(sizeof(struct activated_layer_info) * inst->expanded_activated_layer_list.count);
         if (!activated_layers) {
             loader_log(inst, VULKAN_LOADER_ERROR_BIT, 0,
@@ -5071,13 +5089,13 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, c
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
 
-        // Create instance chain of enabled layers
+        // Create instance chain of enabled layers // 读取 layer expose 的指针 + 构造 VkLayerInstanceLink 链表
         for (int32_t i = inst->expanded_activated_layer_list.count - 1; i >= 0; i--) {
             struct loader_layer_properties *layer_prop = inst->expanded_activated_layer_list.list[i];
             loader_platform_dl_handle lib_handle;
 
             // Skip it if a Layer with the same name has been already successfully activated
-            if (loader_names_array_has_layer_property(&layer_prop->info, num_activated_layers, activated_layers)) {
+            if (loader_names_array_has_layer_property(&layer_prop->info, num_activated_layers, activated_layers)) { // 理论上 expanded_activated_layer_list 已经没有重名的layer了。
                 continue;
             }
 
@@ -5199,7 +5217,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, c
         }
     }
 
-    // Make sure each layer requested by the application was actually loaded
+    // Make sure each layer requested by the application was actually loaded // logging + 如果 pCreateInfo 中指定的 layer 没有成功启用 fail
     for (uint32_t exp = 0; exp < inst->expanded_activated_layer_list.count; ++exp) {
         struct loader_layer_properties *exp_layer_prop = inst->expanded_activated_layer_list.list[exp];
         bool found = false;
@@ -5327,6 +5345,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, c
 
     if (res == VK_SUCCESS) {
         // Copy the current disp table into the terminator_dispatch table so we can use it in loader_gpa_instance_terminator()
+        assert(0 == memcmp(&inst->disp->layer_inst_disp, &instance_disp, sizeof(VkLayerInstanceDispatchTable)));
         memcpy(&inst->terminator_dispatch, &inst->disp->layer_inst_disp, sizeof(VkLayerInstanceDispatchTable));
 
         loader_init_instance_core_dispatch_table(&inst->disp->layer_inst_disp, next_gipa, *created_instance);
@@ -5919,6 +5938,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
     }
 
     for (uint32_t i = 0; i < ptr_instance->icd_tramp_list.count; i++) {
+        // 1. 过滤 ppEnabledExtensionNames 掉该 ICD 不支持的
         icd_term = loader_icd_add(ptr_instance, &ptr_instance->icd_tramp_list.scanned_list[i]);
         if (NULL == icd_term) {
             loader_log(ptr_instance, VULKAN_LOADER_ERROR_BIT, 0,

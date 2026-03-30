@@ -480,7 +480,6 @@ void loader_remove_instance_only_debug_funcs(struct loader_instance *ptr_instanc
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
                                                               const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
-    struct loader_instance *ptr_instance = NULL;
     VkInstance created_instance = VK_NULL_HANDLE;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
     VkInstanceCreateInfo ici = {0};
@@ -493,17 +492,17 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     if (pCreateInfo == NULL) {
         loader_log(NULL, VULKAN_LOADER_FATAL_ERROR_BIT | VULKAN_LOADER_ERROR_BIT | VULKAN_LOADER_VALIDATION_BIT, 0,
                    "vkCreateInstance: \'pCreateInfo\' is NULL (VUID-vkCreateInstance-pCreateInfo-parameter)");
-        goto out;
+        return res;
     }
     ici = *pCreateInfo;
 
     if (pInstance == NULL) {
         loader_log(NULL, VULKAN_LOADER_FATAL_ERROR_BIT | VULKAN_LOADER_ERROR_BIT | VULKAN_LOADER_VALIDATION_BIT, 0,
                    "vkCreateInstance \'pInstance\' not valid (VUID-vkCreateInstance-pInstance-parameter)");
-        goto out;
+        return res;
     }
 
-    ptr_instance =
+    struct loader_instance *const ptr_instance =
         (struct loader_instance *)loader_calloc(pAllocator, sizeof(struct loader_instance), VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 
     if (ptr_instance == NULL) {
@@ -708,7 +707,13 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
         // the CreateInstance command go by. This allows the layer's
         // GetInstanceProcAddr functions to return valid extension functions
         // if enabled.
+        // Q: 为什么 core function 在 loader_create_instance_chain > loader_init_instance_core_dispatch_table 中填充，而 extension 在这里填充？
+        // A: 一个可能的说法是 enabled_extensions 有可能改变比如 `loader_gpa_instance_terminator` 对于某些 extension 的返回结果（尽管在现在的代码只有 ext_debug_utils 和 unknown extension (这一点我不确定是否可能改变返回结果，还没有阅读 unknown的处理逻辑)）
+        //    因此，需要在 enabled_extensions 确定之后再 query extension address.
+        //    不过话说回来，这也没必要啊，因为 loader_init_instance_core_dispatch_table 之前所有 layer 的 CreateInstance 已经返回了，完全可以把 fill_out_enabled_instance_extensions 移到 query core func addr 之前。
         loader_activate_instance_layer_extensions(ptr_instance, created_instance);
+        // 另外就是这个 instance_finished_creation 还是不太理解为什么要这个，理论上应该只有 last layer 会调用 `loader_gpa_instance_terminator` 那应该一直返回 terminator 就可以啊。
+        // 尽管似乎有个 blame 的 bug? 但我还没看那个 bug 的内容，不知道是不是历史变迁之后这段已经没有意义了。
         ptr_instance->instance_finished_creation = true;
     } else if (VK_ERROR_EXTENSION_NOT_PRESENT == res && !ptr_instance->create_terminator_invalid_extension) {
         loader_log(ptr_instance, VULKAN_LOADER_WARN_BIT, 0,

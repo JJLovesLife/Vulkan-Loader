@@ -134,7 +134,7 @@ struct loader_layer_functions {
     char *str_gipa; // layer_settings:.layers[].functions.vkGetInstanceProcAddr
     char *str_gdpa; // layer_settings:.layers[].functions.vkGetDeviceProcAddr
     char *str_negotiate_interface; // layer_settings:.layers[].functions.vkNegotiateLoaderLayerInterfaceVersion
-    PFN_vkNegotiateLoaderLayerInterfaceVersion negotiate_layer_interface;
+    PFN_vkNegotiateLoaderLayerInterfaceVersion negotiate_layer_interface; // dlsym(str_negotiate_interface || "vkNegotiateLoaderLayerInterfaceVersion")
     PFN_vkGetInstanceProcAddr get_instance_proc_addr;
     PFN_vkGetDeviceProcAddr get_device_proc_addr;
     PFN_GetPhysicalDeviceProcAddr get_physical_device_proc_addr;
@@ -186,7 +186,7 @@ struct loader_layer_properties {
     enum layer_type_flags type_flags;
     enum loader_settings_layer_control settings_control_value; // loader_settings:.settings.layers[].control
 
-    uint32_t interface_version;  // PFN_vkNegotiateLoaderLayerInterfaceVersion
+    uint32_t interface_version;  // PFN_vkNegotiateLoaderLayerInterfaceVersion // loader 和 layer 协商版本结果
     char *manifest_file_name; // loader_settings:.settings.layers[].path
     char *lib_name; // dir(manifest_file_name) + layer_settings:.layers[].library_path 大部分情况下，有些额外的 absolute 以及其他不太寻常的逻辑 see: combine_manifest_directory_and_library_path
     enum loader_layer_library_status lib_status;
@@ -275,17 +275,17 @@ struct loader_device {
 // Per ICD structure
 struct loader_icd_term {
     // pointers to find other structs
-    const struct loader_scanned_icd *scanned_icd;
+    const struct loader_scanned_icd *scanned_icd; // &this_instance->icd_tramp_list.scanned_list[i]
     const struct loader_instance *this_instance;
     struct loader_device *logical_device_list;
     VkInstance instance;  // instance object from the icd
     struct loader_icd_term_dispatch dispatch;
 
-    struct loader_icd_term *next;
+    struct loader_icd_term *next; // 单链表 (head: this_instance->icd_terms)
 
     PFN_PhysDevExt phys_dev_ext[MAX_NUM_UNKNOWN_EXTS];
 
-    struct loader_instance_extension_enable_list enabled_instance_extensions;
+    struct loader_instance_extension_enable_list enabled_instance_extensions; // 该 ICD 支持的 instance ext
 
     uint32_t physical_device_count;
 
@@ -328,7 +328,7 @@ struct loader_instance {
     // We need to manually track physical devices over time.  If the user
     // re-queries the information, we don't want to delete old data or
     // create new data unless necessary.
-    uint32_t total_gpu_count;
+    uint32_t total_gpu_count; // = phys_dev_count_term or 0, 0 if enumerate failed
     uint32_t phys_dev_count_term;
     struct loader_physical_device_term **phys_devs_term;
     uint32_t phys_dev_count_tramp;
@@ -342,9 +342,9 @@ struct loader_instance {
 
     struct loader_instance *next; // global linked list of loader.instances
 
-    uint32_t icd_terms_count;
-    struct loader_icd_term *icd_terms;
-    struct loader_icd_tramp_list icd_tramp_list;
+    uint32_t icd_terms_count; // # of icd_terms
+    struct loader_icd_term *icd_terms; // 单链表 (field: next) 实际 CreateInstance 时候创建的结构体
+    struct loader_icd_tramp_list icd_tramp_list; // 这个 instance 的 final ICD list, 更多是 ICD so file 和 loader 之间的接口
 
     // Must store the strings inside loader_instance directly - since the asm code will offset into
     // loader_instance to get the function name
@@ -391,7 +391,7 @@ struct loader_instance {
 
     bool portability_enumeration_enabled; // VK_KHR_portability_enumeration
 
-    bool create_terminator_invalid_extension;
+    bool create_terminator_invalid_extension; // warn log only
     bool supports_get_dev_prop_2;
 };
 
