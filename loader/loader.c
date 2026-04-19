@@ -996,7 +996,7 @@ out:
     return res;
 }
 
-VkResult loader_add_device_extensions(const struct loader_instance *inst,
+VkResult loader_add_device_extensions(ALLOC_AND_LOG_ONLY const struct loader_instance *inst,
                                       PFN_vkEnumerateDeviceExtensionProperties fpEnumerateDeviceExtensionProperties,
                                       VkPhysicalDevice physical_device, const char *lib_name,
                                       struct loader_extension_list *ext_list) {
@@ -6369,7 +6369,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
                        icd_term->scanned_icd->lib_name);
         }
     }
-
+    // 把 VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO 中的 VkPhysicalDevice 替换成 ICD 版本的 VkPhysicalDevice
     // Before we continue, If KHX_device_group is the list of enabled and viable extensions, then we then need to look for the
     // corresponding VkDeviceGroupDeviceCreateInfo struct in the device list and replace all the physical device values (which
     // are really loader physical device terminator values) with the ICD versions.
@@ -6415,7 +6415,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
             pNext = pNext->pNext;
         }
     }
-
+    // 尝试模拟 ICD 不支持的几个特殊 Extension
     // Handle loader emulation for structs that are not supported by the ICD:
     // Presently, the emulation leaves the pNext chain alone. This means that the ICD will receive items in the chain which
     // are not recognized by the ICD. If this causes the ICD to fail, then the items would have to be removed here. The current

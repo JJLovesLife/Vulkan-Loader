@@ -236,9 +236,9 @@ struct loader_dev_dispatch_table {
 // per CreateDevice structure
 struct loader_device {
     struct loader_dev_dispatch_table loader_dispatch;
-    VkDevice chain_device;  // device object from the dispatch chain
-    VkDevice icd_device;    // device object from the icd
-    struct loader_physical_device_term *phys_dev_term;
+    VkDevice chain_device;  // device object from the dispatch chain // first layer 返回的 handle
+    VkDevice icd_device;    // device object from the icd // ICD 返回的 handle
+    struct loader_physical_device_term *phys_dev_term; // loader wrapper of ICD physical device
 
     VkAllocationCallbacks alloc_callbacks;
 
